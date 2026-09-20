@@ -21,8 +21,11 @@
  *    live OpenAPI, and the server refuses to start if one is missing, rather
  *    than failing later inside a tool call the agent will misread.
  */
-import { readFile } from 'node:fs/promises';
-import { basename, extname } from 'node:path';
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { basename, extname, join } from 'node:path';
+import { promisify } from 'node:util';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -32,6 +35,40 @@ const KEY = process.env.VENDLISTS_API_KEY ?? process.env.VENDLISTS_KEY ?? '';
 const GUIDE_URI = 'vendlists://guide';
 
 const CONTENT_TYPES = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
+/*
+  ⚠️ IPHONES SHOOT HEIC, AND THE API TAKES JPEG, PNG OR WEBP.
+
+  "Here are the photos" means the camera roll, and on an iPhone that is HEIC.
+  Refusing it would push the conversion onto every agent that ever uses this
+  server, and most would simply fail in front of the person. So convert it
+  here, where there is a real machine with real tools, and say plainly when
+  there is no converter to hand.
+*/
+const CONVERTIBLE = new Set(['.heic', '.heif']);
+const run = promisify(execFile);
+
+async function asUploadable(file) {
+  const suffix = extname(file).toLowerCase();
+  if (CONTENT_TYPES[suffix]) return { path: file, contentType: CONTENT_TYPES[suffix] };
+  if (!CONVERTIBLE.has(suffix)) {
+    throw new Error(`${basename(file)}: photos must be jpeg, png, webp or heic.`);
+  }
+  const out = join(await mkdtemp(join(tmpdir(), 'vendlists-')), `${basename(file, extname(file))}.jpg`);
+  for (const [cmd, args] of [
+    ['sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '85', file, '--out', out]],
+    ['heif-convert', ['-q', '85', file, out]],
+    ['magick', [file, '-quality', '85', out]],
+  ]) {
+    try {
+      await run(cmd, args);
+      return { path: out, contentType: 'image/jpeg' };
+    } catch { /* try the next converter */ }
+  }
+  throw new Error(
+    `${basename(file)} is HEIC and nothing on this machine can convert it. `
+    + 'Install ImageMagick (`brew install imagemagick`) or libheif, or export the photo as JPEG first.',
+  );
+}
 
 /** Every path this server calls. Checked against the live schema at startup. */
 const PATHS = [
@@ -129,31 +166,32 @@ server.registerTool(
   'vendlists_upload_photos',
   {
     title: 'Upload photos from this computer',
-    description: 'Upload one or more local photo files (jpeg, png or webp) to a draft. The first file is the main photo.',
+    description: 'Upload one or more local photo files to a draft: jpeg, png, webp, or iPhone HEIC, which is converted here. The first file is the main photo.',
     inputSchema: {
       listingId: z.string(),
       files: z.array(z.string()).min(1).describe('Absolute paths to photo files on this machine.'),
     },
   },
   async ({ listingId, files }) => {
-    const types = files.map((file) => {
-      const type = CONTENT_TYPES[extname(file).toLowerCase()];
-      if (!type) throw new Error(`${basename(file)}: photos must be jpeg, png or webp.`);
-      return type;
-    });
+    const uploadable = [];
+    for (const file of files) uploadable.push(await asUploadable(file));
     const urls = await api('POST', '/listings/upload-url', {
       listingId,
-      files: types.map((contentType, index) => ({ contentType, index })),
+      files: uploadable.map(({ contentType }, index) => ({ contentType, index })),
     });
     for (const [i, entry] of urls.entries()) {
       const put = await fetch(entry.uploadUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': types[i] },
-        body: await readFile(files[i]),
+        headers: { 'Content-Type': uploadable[i].contentType },
+        body: await readFile(uploadable[i].path),
       });
       if (!put.ok) throw new Error(`upload of ${basename(files[i])} → ${put.status}`);
     }
-    return asText(`Uploaded ${files.length} photo${files.length === 1 ? '' : 's'} to ${listingId}. Next: vendlists_generate.`);
+    const converted = uploadable.filter(({ path }, i) => path !== files[i]).length;
+    return asText(
+      `Uploaded ${files.length} photo${files.length === 1 ? '' : 's'} to ${listingId}`
+      + `${converted ? ` (${converted} converted from HEIC)` : ''}. Next: vendlists_generate.`,
+    );
   },
 );
 
