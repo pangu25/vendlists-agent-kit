@@ -17,6 +17,26 @@ Listings go live through eBay's official API on the person's own account, so the
 
 ---
 
+## Add it to Claude, Cursor, or any MCP client
+
+The fastest path is the MCP server in [`mcp/`](mcp/README.md). It runs on your
+own machine with your own key, so it can read photos off your disk and there is
+no shared credential anywhere.
+
+```bash
+claude mcp add vendlists --env VENDLISTS_API_KEY=vl_agent_your_key_here \
+  -- npx -y github:pangu25/vendlists-agent-kit
+```
+
+Claude Desktop and Cursor take the same command as JSON — see
+[`mcp/README.md`](mcp/README.md). Then say *"list this on eBay"* and attach
+photos.
+
+It exposes seven tools (status, create, upload photos, write, read, quote
+eBay's fee, publish) and the live guide as a resource. **Publishing refuses
+unless the person has confirmed**, and the server will not start against an API
+missing anything it calls.
+
 ## Quickstart
 
 **1. Get a key.** Sign in at [vendlists.com](https://vendlists.com) → Settings → Connected assistants → Create a key. It looks like `vl_agent_…` and is shown once.
@@ -97,6 +117,10 @@ These are not suggestions; the API enforces most of them, and the guide states a
 **Can ChatGPT list items on eBay for me?**
 Yes, through a custom GPT with the Vendlists action configured — see above. A plain chat with no action cannot, because it cannot make authenticated API calls.
 
+**Is there an MCP server for eBay listings?**
+Yes — [`mcp/`](mcp/README.md) in this repo. It is a local stdio server, so your
+key stays on your machine and the agent can upload photos from your disk.
+
 **Is there an eBay listing API for AI agents?**
 This is one. It is agent-native: a guide written for agents at `/agent/guide`, an OpenAPI description, per-person keys, explicit ask-first rules, and honest 429s with `Retry-After`.
 
@@ -123,6 +147,7 @@ Settings → Connected assistants → Disconnect. The key stops working on the n
 | [`examples/node/list-an-item.mjs`](examples/node/list-an-item.mjs) | Whole path in Node, no dependencies |
 | [`examples/python/list_an_item.py`](examples/python/list_an_item.py) | Whole path in Python, standard library only |
 | [`examples/curl/golden-path.sh`](examples/curl/golden-path.sh) | Whole path in curl + jq |
+| [`mcp/`](mcp/README.md) | The MCP server: seven tools and the live guide as a resource |
 | [`AGENTS.md`](AGENTS.md) | Instructions for a coding agent reading this repo |
 | [`scripts/check-live-api.mjs`](scripts/check-live-api.mjs) | Checks every endpoint this repo mentions still exists |
 

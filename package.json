@@ -1,0 +1,50 @@
+{
+  "name": "vendlists-agent-kit",
+  "version": "1.0.0",
+  "description": "List items on eBay with an AI agent: an MCP server, working examples and a ready prompt for the Vendlists API.",
+  "scripts": {
+    "mcp": "node mcp/server.mjs",
+    "check": "node scripts/check-live-api.mjs",
+    "smoke": "node mcp/smoke-test.mjs"
+  },
+  "keywords": [
+    "ebay",
+    "ebay-api",
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "llm-tools",
+    "openapi",
+    "listing",
+    "reselling",
+    "chatgpt",
+    "claude"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.25.76"
+  },
+  "type": "module",
+  "bin": {
+    "vendlists-mcp": "mcp/server.mjs"
+  },
+  "files": [
+    "mcp",
+    "prompts",
+    "examples",
+    "scripts",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://github.com/pangu25/vendlists-agent-kit",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pangu25/vendlists-agent-kit.git"
+  },
+  "main": "mcp/server.mjs"
+}
