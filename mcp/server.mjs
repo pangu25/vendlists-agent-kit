@@ -47,22 +47,42 @@ const CONTENT_TYPES = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'im
 const CONVERTIBLE = new Set(['.heic', '.heif']);
 const run = promisify(execFile);
 
+/*
+  ⚠️ A FULL-RESOLUTION PHONE PHOTO IS TOO BIG TO BE READ, AND THE FAILURE IS
+  SILENT UNTIL THE LISTING FAILS.
+
+  The worker reads photos as base64 and skips any over ~4.8 MB, which a 3.6 MB
+  JPEG exceeds once encoded — so a perfectly ordinary iPhone photo uploads
+  fine, is then skipped, and the listing fails with "No images could be loaded
+  for analysis". Measured on a real photo: 3,659,647 bytes became 4,879,532.
+
+  So photos are scaled to fit a 2048px box and re-encoded before upload. That
+  is far more detail than the model uses, an order of magnitude smaller, and it
+  makes the failure impossible rather than rare.
+*/
+const MAX_EDGE_PIXELS = 2048;
+
 async function asUploadable(file) {
   const suffix = extname(file).toLowerCase();
-  if (CONTENT_TYPES[suffix]) return { path: file, contentType: CONTENT_TYPES[suffix] };
-  if (!CONVERTIBLE.has(suffix)) {
+  const known = CONTENT_TYPES[suffix];
+  if (!known && !CONVERTIBLE.has(suffix)) {
     throw new Error(`${basename(file)}: photos must be jpeg, png, webp or heic.`);
   }
   const out = join(await mkdtemp(join(tmpdir(), 'vendlists-')), `${basename(file, extname(file))}.jpg`);
   for (const [cmd, args] of [
-    ['sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '85', file, '--out', out]],
-    ['heif-convert', ['-q', '85', file, out]],
-    ['magick', [file, '-quality', '85', out]],
+    ['sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '80', '-Z', String(MAX_EDGE_PIXELS), file, '--out', out]],
+    ['magick', [file, '-resize', `${MAX_EDGE_PIXELS}x${MAX_EDGE_PIXELS}>`, '-quality', '80', out]],
+    ['heif-convert', ['-q', '80', file, out]],
   ]) {
     try {
       await run(cmd, args);
-      return { path: out, contentType: 'image/jpeg' };
-    } catch { /* try the next converter */ }
+      return { path: out, contentType: 'image/jpeg', prepared: true };
+    } catch { /* try the next tool */ }
+  }
+  if (known) {
+    // Nothing to resize with. Send it as it is: big is better than nothing,
+    // and the worker's own limit decides.
+    return { path: file, contentType: known, prepared: false };
   }
   throw new Error(
     `${basename(file)} is HEIC and nothing on this machine can convert it. `
@@ -187,10 +207,10 @@ server.registerTool(
       });
       if (!put.ok) throw new Error(`upload of ${basename(files[i])} → ${put.status}`);
     }
-    const converted = uploadable.filter(({ path }, i) => path !== files[i]).length;
+    const prepared = uploadable.filter((u) => u.prepared).length;
     return asText(
       `Uploaded ${files.length} photo${files.length === 1 ? '' : 's'} to ${listingId}`
-      + `${converted ? ` (${converted} converted from HEIC)` : ''}. Next: vendlists_generate.`,
+      + `${prepared ? ` (${prepared} converted and scaled for upload)` : ''}. Next: vendlists_generate.`,
     );
   },
 );
