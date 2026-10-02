@@ -3,7 +3,7 @@
  * Vendlists as an MCP server: list items on eBay from Claude, Cursor, or any
  * MCP client, using the person's own Vendlists key.
  *
- *   VENDLISTS_API_KEY=vl_agent_… npx github:pangu25/vendlists-agent-kit
+ *   Configure VENDLISTS_API_KEY in your MCP host, then run this bundled file.
  *
  * ══ WHY LOCAL, OVER STDIO ═══════════════════════════════════════════════
  *
@@ -15,8 +15,9 @@
  * ══ TWO RULES THIS SERVER ENFORCES, NOT JUST DOCUMENTS ══════════════════
  *
  * 1. PUBLISHING NEEDS THE PERSON'S WORD. `vendlists_publish` refuses unless
- *    the caller passes `confirmedByPerson: true`, so a model cannot drift into
- *    putting a real item in front of real buyers. The refusal says what to ask.
+ *    the caller passes `confirmedByPerson: true`. This explicit flag is supplied
+ *    by the model; it does not independently verify the person's consent.
+ *    The client must ask the person before setting it.
  * 2. NO INVENTED ROUTES. At startup every path below is checked against the
  *    live OpenAPI, and the server refuses to start if one is missing, rather
  *    than failing later inside a tool call the agent will misread.
@@ -133,7 +134,7 @@ async function guideMarkdown() {
 }
 
 const server = new McpServer(
-  { name: 'vendlists', version: '1.0.0' },
+  { name: 'vendlists', version: '1.1.0' },
   {
     instructions: [
       'Vendlists turns photos of an item into a finished eBay listing on the person\'s own eBay account.',

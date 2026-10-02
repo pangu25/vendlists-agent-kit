@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "vendlists": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs"],
+      "env": {
+        "VENDLISTS_API": "https://api.vendlists.com",
+        "VENDLISTS_API_KEY": "${user_config.api_key}"
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "vendlists",
+  "owner": { "name": "Vendlists", "email": "hello@vendlists.com" },
+  "metadata": { "description": "Vendlists tools and skills for creating and reviewing eBay listings." },
+  "plugins": [
+    {
+      "name": "vendlists",
+      "source": "./",
+      "description": "Create and review eBay listings with Vendlists; publish after the seller approves."
+    }
+  ]
+}
