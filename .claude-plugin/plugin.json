@@ -1,0 +1,28 @@
+{
+  "name": "vendlists",
+  "displayName": "Vendlists",
+  "version": "1.1.0",
+  "description": "Create eBay listings from local photos, review titles and item specifics, and publish to your own seller account after approval.",
+  "author": {
+    "name": "Vendlists",
+    "email": "hello@vendlists.com",
+    "url": "https://vendlists.com"
+  },
+  "homepage": "https://github.com/pangu25/vendlists-agent-kit",
+  "repository": "https://github.com/pangu25/vendlists-agent-kit",
+  "documentationUrl": "https://github.com/pangu25/vendlists-agent-kit#readme",
+  "supportUrl": "https://vendlists.com/support",
+  "privacyPolicyUrl": "https://vendlists.com/privacy",
+  "termsOfServiceUrl": "https://vendlists.com/terms",
+  "license": "MIT",
+  "keywords": ["ebay", "ai-listings", "reselling", "listing-assistant", "product-photos", "item-specifics"],
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "Vendlists assistant key",
+      "description": "Create your own key at vendlists.com in Settings → Connected assistants. Enter it here, never in a chat message.",
+      "required": true,
+      "sensitive": true
+    }
+  }
+}

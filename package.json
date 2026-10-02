@@ -1,7 +1,7 @@
 {
   "name": "vendlists-agent-kit",
-  "version": "1.0.0",
-  "description": "List items on eBay with an AI agent: an MCP server, working examples and a ready prompt for the Vendlists API.",
+  "version": "1.1.0",
+  "description": "An eBay listing assistant for Claude: local MCP tools, photo-to-listing workflow and listing-quality review with Vendlists.",
   "scripts": {
     "mcp": "node mcp/server.mjs",
     "check": "node scripts/check-live-api.mjs",
@@ -30,6 +30,10 @@
     "vendlists-mcp": "mcp/server.mjs"
   },
   "files": [
+    ".claude-plugin",
+    ".mcp.json",
+    "skills",
+    "docs",
     "mcp",
     "prompts",
     "examples",
