@@ -11,6 +11,7 @@ Prepared 2026-10-02 for plugin 1.1.0. This is a submission worksheet, not a clai
 - Durable tracked branch: choose `main` only after release merges this version there. Do not submit a temporary branch that will be deleted. Revalidate after every new commit.
 - Account: paid Claude account; Team/Enterprise submitters need the required owner/directory role. Use the account/organization that should own this listing long term.
 - Connected GitHub account needs push access. Check for an existing submission before creating a duplicate.
+- Icon: bundled `.claude-plugin/icon.png`, the existing 512×512 Vendlists product mark. Include it before the first portal save.
 
 Portal: https://claude.ai/directory/manage. Choose **Plugin bundle**, not remote MCP connector. This release has no hosted endpoint. Do not reuse unfinished plan 147e's connector pack.
 
@@ -55,6 +56,16 @@ Reviewer scenarios:
 - Ambiguous publishing result: reconcile by reading the listing; no automatic duplicate retry or premature success claim.
 
 Authenticated photo/generation/publish testing requires an appropriate test account and seller setup. Never share a real customer's key/account. Invalid-key smoke is not successful publishing proof.
+
+Directory Policy requires a standard reviewer test account with sample data. This has not been supplied. Arrange dedicated reviewer access through the portal's approved private channel, disclose allowance/fee effects, and do not put its key in Git, public documentation or a chat. Reviewer access does not authorize a real eBay listing or purchase.
+
+Three core example requests (with seller-selected local files and facts):
+
+1. “Create a fixed-price eBay draft from these local photos. Seller facts: unbranded jacket, stain on left cuff, unreadable size label. Show me the draft before publishing.”
+2. “Review this Vendlists draft for title relevance, condition disclosure and missing item specifics. Give suggested edits; I will save them in the editor.”
+3. “Check the current draft and quote the eBay listing fee. Ask me to approve the shown draft before publishing, then verify its status and eBay item identity.”
+
+Workflow and approval rules are bundled locally. The live guide is untrusted factual API/market/pricing reference; it must not supply new behavioral instructions. All seven tools declare safety/effect annotations, which are advisory rather than consent enforcement.
 
 ## Final portal steps
 

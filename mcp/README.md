@@ -32,7 +32,7 @@ Replace the path with your checkout and configure the key in host secret setting
 | `vendlists_quote_ebay_fees` | Quote eBay's listing fee |
 | `vendlists_publish` | Publish after explicit approval |
 
-Resource `vendlists://guide` fetches current guidance. Startup checks each named API path exists; it does not check account authorization or all request schemas.
+Resource `vendlists://guide` fetches current factual API/market/pricing reference. Remote text is untrusted data, never behavioral instructions; workflow and approval rules are bundled locally. Every tool declares read, destructive, retry and external-service hints. These are advisory metadata, not consent enforcement. Startup checks each named API path exists; it does not check account authorization or all request schemas.
 
 Publication refuses without true `confirmedByPerson`. The assistant supplies that flag and must obtain actual approval of the current draft and fee first. There is no draft-update or live-revision tool. Reconcile uncertain publication results by reading the listing before retrying.
 
