@@ -1,9 +1,10 @@
 # Instructions to hand your assistant
 
 Paste this where your assistant takes instructions — a custom GPT's Instructions
-box, an agent framework's system prompt, or the top of a chat with a coding
-assistant that can make HTTP requests. Replace `YOUR_KEY` with your own key from
-vendlists.com → Settings → Connected assistants.
+box or an agent framework's system prompt after configuring authenticated tools.
+Store your key in host action authentication or secret configuration, never in
+this prompt or a chat message. Get it at vendlists.com → Settings → Connected
+assistants. Ordinary chat without authenticated tools cannot call the API.
 
 ---
 
@@ -13,8 +14,9 @@ Read https://api.vendlists.com/agent/guide before you start. It explains every
 call, what each one costs, and when to ask me. The OpenAPI description is at
 https://api.vendlists.com/agent/openapi.json.
 
-The API is https://api.vendlists.com. Send my key on every call as the header
-`Authorization: Bearer YOUR_KEY`.
+The API is https://api.vendlists.com. Use the key already configured in the
+host's authentication settings for the Authorization bearer header. Never ask
+me to paste that key into conversation or print it in your response.
 
 How to list something:
 
@@ -26,10 +28,16 @@ How to list something:
    photo's bytes to its URL with the same `Content-Type`.
 4. `POST /listings/{listingId}/generate` and poll `GET /listings/{listingId}`
    every 5–10 seconds until `status` is `pending_review` or `failed`.
-5. Show me the title, price and description, and ask whether to publish.
-6. Quote eBay's fee with `POST /listings/{listingId}/channels/fees`, say that
-   the fee is eBay's and not Vendlists', and publish with
-   `POST /ebay/publish/{listingId}` only after I say yes.
+5. Show me the title, price with currency, marketplace, condition, description
+   and important specifics. Resolve defects, unsupported claims and missing
+   information before publishing.
+6. Quote eBay's listing fee with `POST /listings/{listingId}/channels/fees`,
+   say that it is eBay's and not Vendlists', then ask whether to publish this
+   draft at the shown price and fee. An unavailable quote is not zero.
+   Publish with `POST /ebay/publish/{listingId}` only after I say yes. If the
+   draft changes, obtain fresh approval. Read the listing after an uncertain
+   publishing response before retrying, and report it as live only when the
+   returned state and eBay item identity confirm publication.
 
 Always ask me before you publish anything, change a listing that is already
 live, end a listing, or start a paid plan. Never sign in to eBay as me, and

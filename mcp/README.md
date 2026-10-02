@@ -1,72 +1,49 @@
-# Vendlists MCP server
+# Vendlists local MCP server
 
-Lists items on eBay from Claude Desktop, Claude Code, Cursor, or any MCP
-client — using the person's own Vendlists key, on their own machine.
+Seven tools create and publish fixed-price eBay listings with local photos and your own Vendlists key. For Claude Code, prefer [plugin setup](../README.md#set-up-in-claude-code), which includes listing skills and a sensitive credential field.
 
-It runs locally over stdio, which is what makes it useful: it can read photos
-off the disk, and there is no shared credential to hand anyone.
+## Standalone local hosts
 
-## Add it
-
-Get a key at vendlists.com → Settings → Connected assistants, then:
-
-**Claude Desktop** — `claude_desktop_config.json`:
+Use a checkout of this repository and install locked dependencies with `npm ci --ignore-scripts`. Configure your local MCP host with:
 
 ```json
 {
   "mcpServers": {
     "vendlists": {
-      "command": "npx",
-      "args": ["-y", "github:pangu25/vendlists-agent-kit"],
-      "env": { "VENDLISTS_API_KEY": "vl_agent_your_key_here" }
+      "command": "node",
+      "args": ["/path/to/vendlists-agent-kit/mcp/server.mjs"],
+      "env": { "VENDLISTS_API_KEY": "YOUR_KEY_IN_HOST_CONFIGURATION_ONLY" }
     }
   }
 }
 ```
 
-**Claude Code** — one command:
+Replace the path with your checkout and configure the key in host secret settings, or protected local configuration if that is the only option. Keep credential-bearing files out of Git and keys out of conversation. Claude Desktop or Cursor can configure this server separately; that is distinct from installing the Claude plugin. It is not a remote connector for web chat.
 
-```bash
-claude mcp add vendlists --env VENDLISTS_API_KEY=vl_agent_your_key_here \
-  -- npx -y github:pangu25/vendlists-agent-kit
-```
+## Tools
 
-**Cursor** — `.cursor/mcp.json`, same shape as Claude Desktop.
-
-Then say: *"list this on eBay"* and attach some photos, or point at a folder.
-
-## What it exposes
-
-| Tool | |
+| Tool | Purpose |
 |---|---|
-| `vendlists_status` | Plan, listings left this month, whether eBay is connected |
-| `vendlists_create_listing` | Start a draft, with what the person told you about the item |
-| `vendlists_upload_photos` | Upload local photo files to the draft |
-| `vendlists_generate` | Vendlists writes title, description, specifics, category, price |
-| `vendlists_get_listing` | Read one listing; poll while it is being written |
-| `vendlists_quote_ebay_fees` | eBay's own fee for this listing |
-| `vendlists_publish` | Put it live — refuses without the person's confirmation |
+| `vendlists_status` | Setup and allowance |
+| `vendlists_create_listing` | Create a draft with known facts |
+| `vendlists_upload_photos` | Upload selected local JPEG/PNG/WebP/HEIC files |
+| `vendlists_generate` | Generate details using allowance |
+| `vendlists_get_listing` | Read a listing and its state |
+| `vendlists_quote_ebay_fees` | Quote eBay's listing fee |
+| `vendlists_publish` | Publish after explicit approval |
 
-Resource `vendlists://guide` is the live agent guide, so the client reads the
-rules from the API rather than from a copy that can rot.
+Resource `vendlists://guide` fetches current guidance. Startup checks each named API path exists; it does not check account authorization or all request schemas.
 
-## Two rules it enforces, rather than documents
+Publication refuses without true `confirmedByPerson`. The assistant supplies that flag and must obtain actual approval of the current draft and fee first. There is no draft-update or live-revision tool. Reconcile uncertain publication results by reading the listing before retrying.
 
-1. **`vendlists_publish` refuses unless `confirmedByPerson` is true.** A model
-   cannot drift into putting a real item in front of real buyers; the refusal
-   tells it what to ask. The tool is also annotated `destructiveHint`.
-2. **It will not start against an API that lacks what it calls.** Every path is
-   checked against the live OpenAPI at startup, so a removed route is a clear
-   error at launch, not a confusing failure mid-conversation.
+The server reads upload-tool paths, invokes installed converters, and leaves prepared JPEGs in OS temporary folders. Supported originals may upload unchanged if conversion fails. See the [data-handling disclosure](../README.md#what-runs-and-where-data-goes).
 
-## Check it yourself
+## Check
 
 ```bash
-npm install
-npm run smoke   # drives the server with a real MCP client and prints what it found
-npm run check   # every endpoint this repo names still exists in the live API
+npm ci --ignore-scripts
+npm run smoke
+npm run check
 ```
 
-`smoke` uses a deliberately invalid key: it proves the handshake, the tool
-list, the guide resource, the publish refusal and clean error handling, without
-touching anyone's account.
+Smoke uses an invalid key, checking protocol and refusal/error handling without creating or publishing a real listing.
