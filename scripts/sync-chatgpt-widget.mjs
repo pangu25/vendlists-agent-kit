@@ -1,0 +1,10 @@
+import { readFile, writeFile } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+const target=process.argv[2];if(!target) throw new Error('Pass the reviewed AWS feature worktree path.');
+const root=resolve(target);const branch=execFileSync('git',['branch','--show-current'],{cwd:root,encoding:'utf8'}).trim();
+if(!branch.startsWith('plans/')) throw new Error('Only sync into an isolated plan branch, never main.');
+const html=await readFile(new URL('../chatgpt-ui/dist/workbench.html',import.meta.url),'utf8');const digest=createHash('sha256').update(html).digest('hex');
+await writeFile(join(root,'lambdas/agent-mcp/generated/widget.ts'),`// Generated from agent-kit Plan 178 chatgpt-ui. Do not edit; regenerate from reviewed source.\nexport const WIDGET_SHA256 = ${JSON.stringify(digest)};\nexport const WIDGET_HTML = ${JSON.stringify(html)};\n`);
+console.log(`Synced reviewed widget ${digest} to ${branch}.`);

@@ -1,0 +1,16 @@
+{
+  "name": "vendlists-chatgpt-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "lint": "node --check src/workbench.mjs && node --check src/bridge.mjs && node --check build.mjs && node --check preview.mjs",
+    "test": "node --test bridge.test.mjs"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "2.0.3",
+    "esbuild": "^0.27.0",
+    "zod": "^4.2.0"
+  }
+}
