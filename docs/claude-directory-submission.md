@@ -1,6 +1,6 @@
 # Claude directory submission — Vendlists
 
-Prepared 2026-10-02 for plugin 1.1.0. This is a submission worksheet, not a claim of approval or publication.
+Historical submission worksheet for plugin 1.1.0, submitted 2026-10-02 at immutable tag `claude-directory-v1.1.0` (cec3462). Submission e72e78d2-7bc1-41cb-9f86-bf02fdfa7735 awaits external review; it is not live. Version 1.2.0 is a separate candidate described in [next-version notes](claude-plugin-1.2.md). Do not move the submitted tag or replace the pending review.
 
 ## Source and release
 
@@ -11,7 +11,7 @@ Prepared 2026-10-02 for plugin 1.1.0. This is a submission worksheet, not a clai
 - Durable tracked branch: choose `main` only after release merges this version there. Do not submit a temporary branch that will be deleted. Revalidate after every new commit.
 - Account: paid Claude account; Team/Enterprise submitters need the required owner/directory role. Use the account/organization that should own this listing long term.
 - Connected GitHub account needs push access. Check for an existing submission before creating a duplicate.
-- Icon: bundled `.claude-plugin/icon.png`, the existing 512×512 Vendlists product mark. Include it before the first portal save.
+- Icon: [bundled product icon](../.claude-plugin/icon.png), the existing 512×512 Vendlists product mark. Include it before the first portal save.
 
 Portal: https://claude.ai/directory/manage. Choose **Plugin bundle**, not remote MCP connector. This release has no hosted endpoint. Do not reuse unfinished plan 147e's connector pack.
 
