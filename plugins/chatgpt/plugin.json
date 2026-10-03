@@ -1,0 +1,112 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "vendlists",
+  "version": "0.1.0",
+  "description": "Create and improve eBay listings from item photos with Vendlists. Generate titles, descriptions and item specifics; review drafts and resolve publishing setup.",
+  "author": {
+    "name": "Vendlists",
+    "email": "hello@vendlists.com",
+    "url": "https://vendlists.com"
+  },
+  "homepage": "https://vendlists.com/agents",
+  "repository": "https://github.com/pangu25/vendlists-agent-kit",
+  "license": "MIT",
+  "keywords": [
+    "ebay",
+    "ebay listings",
+    "ai ebay listing",
+    "photo to listing",
+    "listing titles",
+    "item specifics",
+    "product descriptions",
+    "reselling",
+    "selling on ebay",
+    "listing optimization"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Vendlists",
+        "shortDescription": "AI eBay listings from photos",
+        "longDescription": "Turn item photos and seller facts into eBay listings with Vendlists. Built for resellers and eBay sellers who want help writing accurate titles, clear descriptions and item specifics.\n\nConnect your Vendlists account, select item photos and describe what you know about the item. Generate a draft, review its photos, title, price and condition in a listing preview, and save supported draft edits. Find existing drafts before creating duplicates. Get plain-language help with eBay account setup and listing-fee notices.\n\nPublishing requires your explicit approval of the current listing and eBay fee. Generating listings uses your existing Vendlists allowance. This plugin does not buy subscriptions or credits. It supports the existing Buy It Now workflow; auction publishing, bulk publishing, live-listing edits, automatic ISBN imports and other marketplaces are unavailable. It does not guarantee search rankings, prices or sales.",
+        "developerName": "Vendlists",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "websiteURL": "https://vendlists.com",
+        "supportURL": "https://vendlists.com/support",
+        "privacyPolicyURL": "https://vendlists.com/privacy",
+        "termsOfServiceURL": "https://vendlists.com/terms",
+        "defaultPrompt": [
+          "Turn these item photos into an eBay listing draft for me to review.",
+          "Improve my eBay draft title, description and item specifics without guessing facts.",
+          "Find my Vendlists draft and help me resolve its eBay publishing setup."
+        ],
+        "brandColor": "#2563EB",
+        "composerIcon": "./assets/logo.png",
+        "logo": "./assets/logo.png"
+      },
+      "onboardingSkill": "./skills/get-started/SKILL.md",
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Photo to eBay draft",
+              "prompt": "Turn these photos of my used camera into an eBay listing. I have tested it and it works.",
+              "tools_triggered": "vendlists_status, vendlists_create_listing, vendlists_upload_photos, vendlists_generate, vendlists_get_listing",
+              "expected_behavior": "Check allowance and ask for missing seller facts/marketplace, create one draft with a retained idempotency key, upload the selected photos, start generation only with allowance, read until pending_review, show the listing workbench. Stop before publishing."
+            },
+            {
+              "description": "Review title and specifics",
+              "prompt": "Use Vendlists to improve the title and item specifics on my draft camera listing.",
+              "tools_triggered": "vendlists_find_listings, vendlists_get_listing, vendlists_update_draft",
+              "expected_behavior": "Find the intended draft and read its revision; propose factual title <=80 characters and supported specifics; save only requested safe fields against expectedUpdatedAt. Preserve identifiers, account, currency and marketplace; ask about uncertain facts."
+            },
+            {
+              "description": "Find existing drafts",
+              "prompt": "Find my Vendlists drafts for the blue jacket; I do not want another duplicate.",
+              "tools_triggered": "vendlists_find_listings, vendlists_get_listing",
+              "expected_behavior": "Search title/SKU and keep pagination; ask which matching draft if ambiguous. Read the selected draft and show its current status. Do not create or publish."
+            },
+            {
+              "description": "Setup recovery",
+              "prompt": "My Vendlists eBay draft is blocked from publishing. Can you help me fix the setup?",
+              "tools_triggered": "vendlists_get_listing, vendlists_check_setup",
+              "expected_behavior": "Read the draft and selected account, return saved readiness with check time and direct editor/setup recovery. Explain unresolved blockers in plain language; do not claim fresh eBay verification or automatically retry publish."
+            },
+            {
+              "description": "Fee and publishing approval",
+              "prompt": "Show me my Vendlists camera draft and the current eBay listing fee so I can decide whether to publish.",
+              "tools_triggered": "vendlists_get_listing, vendlists_quote_ebay_fees",
+              "expected_behavior": "Show title, selected marketplace/account, quantity, price/currency and fee. Ask separately for any first-site fee acknowledgement and for approval of the exact current draft. The prompt is not publication approval; no publish call."
+            }
+          ],
+          "negative": [
+            {
+              "description": "General facts",
+              "prompt": "What is the capital of France?",
+              "tools_triggered": "",
+              "expected_behavior": "Answer without invoking Vendlists."
+            },
+            {
+              "description": "Unrelated marketplace",
+              "prompt": "Write an Etsy product listing for a handmade mug.",
+              "tools_triggered": "",
+              "expected_behavior": "Do not invoke Vendlists eBay tools or claim another marketplace is supported."
+            },
+            {
+              "description": "Digital subscription purchase",
+              "prompt": "Buy me more Vendlists generation credits through ChatGPT.",
+              "tools_triggered": "",
+              "expected_behavior": "Do not invoke tools to buy plans, credits or subscriptions; explain that purchasing digital services is unavailable in this plugin and do not provide checkout or upgrade links."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "The plugin prepares physical-goods eBay listings and, after explicit approval, publishes using the seller's existing eBay connection. It does not sell Vendlists subscriptions, credits or digital services, process checkout, or charge ChatGPT-specific fees."
+      }
+    }
+  }
+}
