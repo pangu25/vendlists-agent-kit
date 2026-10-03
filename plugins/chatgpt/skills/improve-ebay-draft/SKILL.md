@@ -13,3 +13,5 @@ Show proposed changes or a compact before/after when useful. Only save what the 
 If revision changed, reread and show the updated draft before saving again. Never overwrite concurrent changes. Refuse auction, processing, imported/live or unknown-format mutations. For fields outside supported edits, offer the direct editor link. After saving, read the resulting draft and show what changed. No automatic regeneration, publish, account changes or paid extras.
 
 Use vendlists_show_listing after reading the intended draft to render its current preview. The display tool rereads the authenticated listing; do not pass invented listing data to it.
+
+Use the selected account returned by `vendlists_status` to bind a new draft explicitly with `ebayAccountId`. Preserve that field with the identical retry inputs/key. If an existing draft has no saved account, use the editor to select one before quoting fees or publishing. Do not publish across a marketplace or currency mismatch.

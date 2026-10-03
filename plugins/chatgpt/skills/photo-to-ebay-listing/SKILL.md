@@ -14,3 +14,5 @@ description: Create an eBay listing draft from selected item photos and seller f
 Default endpoint is a reviewed draft. Publish only after a separate current fee quote and explicit approval, following resolve-ebay-publishing. Do not claim app changes, generation or publishing happened merely because suggested text was written in chat. No subscription or credit purchases through this plugin; stop when entitlement is unavailable.
 
 Use vendlists_show_listing after reading the intended draft to render its current preview. The display tool rereads the authenticated listing; do not pass invented listing data to it.
+
+Use the selected account returned by `vendlists_status` to bind a new draft explicitly with `ebayAccountId`. Preserve that field with the identical retry inputs/key. If an existing draft has no saved account, use the editor to select one before quoting fees or publishing. Do not publish across a marketplace or currency mismatch.

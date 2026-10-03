@@ -14,7 +14,7 @@ function canEdit(value) {
   return value && ['draft', 'pending_review', 'failed'].includes(value.status) && !value.ebayItemId && !value.ebayListingId
     && !['imported', 'ebay_import'].includes(value.origin) && value.source !== 'ebay_import' && !value.publishedAt && !value.ebayPublishedAt && !value.hasAuctionObservation
     && (value.ebaySelling === undefined || value.ebaySelling && typeof value.ebaySelling.format === 'string')
-    && [value.ebaySelling?.format, value.ebayListingFormat, value.ebayListingType].filter(v => v !== undefined)
+    && [value.ebaySelling?.format, value.ebayListingFormat, value.ebayListingType, value.listingFormat].filter(v => v !== undefined)
       .every(v => ['FIXED_PRICE', 'FixedPriceItem', 'StoresFixedPrice'].includes(v)) && Boolean(value.updatedAt);
 }
 function invalidateApproval() { quote = undefined; quoteRevision = undefined; for (const id of ['fee-step', 'publish-step']) $(id).hidden = true; }
@@ -63,7 +63,7 @@ function render(value, force = false) {
     button.onclick = () => { showPhoto(url); for (const b of $('thumbs').children) b.setAttribute('aria-pressed', String(b === button)); }; $('thumbs').append(button);
   });
   if (photos[0]) showPhoto(photos[0]); text('photo-count', `${photos.length} photo${photos.length === 1 ? '' : 's'}`);
-  text('photos', photos.length ? 'Replace photos' : 'Add photos');
+  text('photos', 'Add photos');
   text('saved', value.updatedAt ? 'Current saved draft' : 'Revision unavailable');
   text('next-title', value.status === 'processing' ? 'Your listing is being written' : 'Ready for the next step?');
   text('next-copy', value.status === 'processing' ? 'Refresh to check progress. Do not start generation again while it is processing.' : canEdit(value) ? 'Review the item details, then check the eBay listing fee.' : 'Open Vendlists for this listing’s next step.');
@@ -121,7 +121,7 @@ $('fee').onclick = () => action(async () => {
   const result = await call('vendlists_quote_ebay_fees', { listingId: listing.listingId });
   const candidate = result.quote;
   if (!candidate || !['free', 'fee'].includes(candidate.state) || !Number.isSafeInteger(candidate.totalMinor)
-      || candidate.totalMinor < 0 || candidate.marketplaceId !== listing.marketplaceId || result.expectedUpdatedAt && result.expectedUpdatedAt !== listing.updatedAt || !/^[A-Z]{3}$/.test(candidate.currency ?? '')) {
+      || candidate.totalMinor < 0 || candidate.marketplaceId !== listing.marketplaceId || result.expectedUpdatedAt && result.expectedUpdatedAt !== listing.updatedAt || candidate.currency !== listing.currency || !/^[A-Z]{3}$/.test(candidate.currency ?? '')) {
     invalidateApproval(); throw new Error('A current fee for this marketplace is unavailable. Resolve setup or open the editor.');
   }
   quote = candidate; quoteRevision = listing.updatedAt; $('fee-step').hidden = false;
@@ -162,12 +162,12 @@ async function normalize(file) {
   } finally { bitmap.close(); }
 }
 $('photos').onclick = () => {
-  if (dirty) { notice('Save your edits before replacing photos.'); return; }
+  if (dirty) { notice('Save your edits before adding photos.'); return; }
   if (!window.openai?.uploadFile || !window.openai?.getFileDownloadUrl) { notice('Photo upload is unavailable in this host. Open Vendlists to add photos, then refresh here.'); return; }
   $('file-input').click();
 };
 $('file-input').onchange = () => action(async () => {
-  if (dirty) throw new Error('Save your edits before replacing photos.');
+  if (dirty) throw new Error('Save your edits before adding photos.');
   const selected = Array.from($('file-input').files ?? []); $('file-input').value = '';
   if (!selected.length) return; if (selected.length > 8) throw new Error('Choose up to eight item views per upload. Use Vendlists for larger photo sets.');
   const normalized = await Promise.all(selected.map(normalize)); const files = [];
@@ -175,6 +175,7 @@ $('file-input').onchange = () => action(async () => {
     const { fileId } = await window.openai.uploadFile(file); const { downloadUrl } = await window.openai.getFileDownloadUrl({ fileId });
     files.push({ file_id: fileId, download_url: downloadUrl, mime_type: file.type, file_name: file.name });
   }
+  invalidateApproval();
   await call('vendlists_upload_photos', { listingId: listing.listingId, files });
   const result = await call('vendlists_get_listing', { listingId: listing.listingId }); render(result.listing ?? result, true); notice('Photos saved to the draft.', 'success');
 });
