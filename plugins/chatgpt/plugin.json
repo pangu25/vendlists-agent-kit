@@ -44,7 +44,7 @@
           "Improve my eBay draft title, description and item specifics without guessing facts.",
           "Find my Vendlists draft and help me resolve its eBay publishing setup."
         ],
-        "brandColor": "#2563EB",
+        "brandColor": "#6366F1",
         "composerIcon": "./assets/logo.png",
         "logo": "./assets/logo.png"
       },
@@ -55,31 +55,31 @@
             {
               "description": "Photo to eBay draft",
               "prompt": "Turn these photos of my used camera into an eBay listing. I have tested it and it works.",
-              "tools_triggered": "vendlists_status, vendlists_create_listing, vendlists_upload_photos, vendlists_generate, vendlists_get_listing",
+              "tools_triggered": "vendlists_status, vendlists_create_listing, vendlists_upload_photos, vendlists_generate, vendlists_get_listing, vendlists_show_listing",
               "expected_behavior": "Check allowance and ask for missing seller facts/marketplace, create one draft with a retained idempotency key, upload the selected photos, start generation only with allowance, read until pending_review, show the listing workbench. Stop before publishing."
             },
             {
               "description": "Review title and specifics",
               "prompt": "Use Vendlists to improve the title and item specifics on my draft camera listing.",
-              "tools_triggered": "vendlists_find_listings, vendlists_get_listing, vendlists_update_draft",
+              "tools_triggered": "vendlists_find_listings, vendlists_get_listing, vendlists_update_draft, vendlists_show_listing",
               "expected_behavior": "Find the intended draft and read its revision; propose factual title <=80 characters and supported specifics; save only requested safe fields against expectedUpdatedAt. Preserve identifiers, account, currency and marketplace; ask about uncertain facts."
             },
             {
               "description": "Find existing drafts",
               "prompt": "Find my Vendlists drafts for the blue jacket; I do not want another duplicate.",
-              "tools_triggered": "vendlists_find_listings, vendlists_get_listing",
+              "tools_triggered": "vendlists_find_listings, vendlists_get_listing, vendlists_show_listing",
               "expected_behavior": "Search title/SKU and keep pagination; ask which matching draft if ambiguous. Read the selected draft and show its current status. Do not create or publish."
             },
             {
               "description": "Setup recovery",
               "prompt": "My Vendlists eBay draft is blocked from publishing. Can you help me fix the setup?",
-              "tools_triggered": "vendlists_get_listing, vendlists_check_setup",
+              "tools_triggered": "vendlists_get_listing, vendlists_check_setup, vendlists_show_listing",
               "expected_behavior": "Read the draft and selected account, return saved readiness with check time and direct editor/setup recovery. Explain unresolved blockers in plain language; do not claim fresh eBay verification or automatically retry publish."
             },
             {
               "description": "Fee and publishing approval",
               "prompt": "Show me my Vendlists camera draft and the current eBay listing fee so I can decide whether to publish.",
-              "tools_triggered": "vendlists_get_listing, vendlists_quote_ebay_fees",
+              "tools_triggered": "vendlists_get_listing, vendlists_quote_ebay_fees, vendlists_show_listing",
               "expected_behavior": "Show title, selected marketplace/account, quantity, price/currency and fee. Ask separately for any first-site fee acknowledgement and for approval of the exact current draft. The prompt is not publication approval; no publish call."
             }
           ],
@@ -104,7 +104,7 @@
             }
           ]
         },
-        "commerce": false,
+        "commerce": true,
         "commerce_description": "The plugin prepares physical-goods eBay listings and, after explicit approval, publishes using the seller's existing eBay connection. It does not sell Vendlists subscriptions, credits or digital services, process checkout, or charge ChatGPT-specific fees."
       }
     }

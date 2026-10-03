@@ -12,3 +12,5 @@ description: Create an eBay listing draft from selected item photos and seller f
 6. Show the workbench and a compact review: title, photos, description, specifics, condition, price/currency, quantity, marketplace and outstanding questions. Titles must stay within eBay's 80-character limit and use facts relevant to this item. Preserve seller identifiers and locale.
 
 Default endpoint is a reviewed draft. Publish only after a separate current fee quote and explicit approval, following resolve-ebay-publishing. Do not claim app changes, generation or publishing happened merely because suggested text was written in chat. No subscription or credit purchases through this plugin; stop when entitlement is unavailable.
+
+Use vendlists_show_listing after reading the intended draft to render its current preview. The display tool rereads the authenticated listing; do not pass invented listing data to it.
