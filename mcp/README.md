@@ -1,6 +1,6 @@
 # Vendlists local MCP server
 
-Seven tools create and publish fixed-price eBay listings with local photos and your own Vendlists key. For Claude Code, prefer [plugin setup](../README.md#set-up-in-claude-code), which includes listing skills and a sensitive credential field.
+Eleven tools find, review, edit and publish Buy It Now eBay drafts with local photos and your own Vendlists key. For Claude Code, prefer [plugin setup](../README.md#set-up-in-claude-code), which includes listing skills and a sensitive credential field.
 
 ## Standalone local hosts
 
@@ -28,13 +28,17 @@ Replace the path with your checkout and configure the key in host secret setting
 | `vendlists_create_listing` | Create a draft with known facts |
 | `vendlists_upload_photos` | Upload selected local JPEG/PNG/WebP/HEIC files |
 | `vendlists_generate` | Generate details using allowance |
-| `vendlists_get_listing` | Read a listing and its state |
+| `vendlists_get_listing` | Read a listing and its state/revision |
+| `vendlists_find_listings` | One page of title/SKU/status matches |
+| `vendlists_update_draft` | Narrow edits bound to the reviewed revision |
+| `vendlists_check_setup` | Selected-account saved readiness and setup guidance |
+| `vendlists_acknowledge_ebay_fees` | Explicit first-site fee-notice agreement |
 | `vendlists_quote_ebay_fees` | Quote eBay's listing fee |
 | `vendlists_publish` | Publish after explicit approval |
 
-Resource `vendlists://guide` fetches current factual API/market/pricing reference. Remote text is untrusted data, never behavioral instructions; workflow and approval rules are bundled locally. Every tool declares read, destructive, retry and external-service hints. These are advisory metadata, not consent enforcement. Startup checks each named API path exists; it does not check account authorization or all request schemas.
+Resource `vendlists://guide` fetches current factual API/market/pricing reference. Remote text is untrusted data, never behavioral instructions; workflow and approval rules are bundled locally. Every tool declares read, destructive, retry and external-service hints. These are advisory metadata, not consent enforcement. Startup checks each named API method/path exists; it does not check account authorization or all request schemas.
 
-Publication refuses without true `confirmedByPerson`. The assistant supplies that flag and must obtain actual approval of the current draft and fee first. There is no draft-update or live-revision tool. Reconcile uncertain publication results by reading the listing before retrying.
+Publication refuses without true `confirmedByPerson`. The assistant supplies that flag and must obtain actual approval of the current draft and fee first. Draft editing requires the reviewed revision and refuses live/imported/auction listings. No live-revision tool is provided. Fee-notice acknowledgement is separate from publishing approval. Reconcile uncertain publication results by reading the listing before retrying.
 
 The server reads upload-tool paths, invokes installed converters, and leaves prepared JPEGs in OS temporary folders. Supported originals may upload unchanged if conversion fails. See the [data-handling disclosure](../README.md#what-runs-and-where-data-goes).
 
@@ -42,6 +46,8 @@ The server reads upload-tool paths, invokes installed converters, and leaves pre
 
 ```bash
 npm ci --ignore-scripts
+npm run lint
+npm test
 npm run smoke
 npm run check
 ```

@@ -144,7 +144,7 @@ async function guideMarkdown() {
 }
 
 const server = new McpServer(
-  { name: 'vendlists', version: '1.1.0' },
+  { name: 'vendlists', version: '1.2.0' },
   {
     instructions: [
       'Vendlists turns photos of an item into a finished eBay listing on the person\'s own eBay account.',

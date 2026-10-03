@@ -34,24 +34,24 @@ try {
   assert.doesNotMatch(client.getInstructions(), /Read the vendlists:\/\/guide resource before/);
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((tool) => tool.name).sort(), [
-    'vendlists_create_listing', 'vendlists_generate', 'vendlists_get_listing',
+    'vendlists_acknowledge_ebay_fees', 'vendlists_check_setup', 'vendlists_create_listing', 'vendlists_find_listings', 'vendlists_generate', 'vendlists_get_listing',
     'vendlists_publish', 'vendlists_quote_ebay_fees', 'vendlists_status',
-    'vendlists_upload_photos',
+    'vendlists_update_draft', 'vendlists_upload_photos',
   ]);
-  const readTools = new Set(['vendlists_status', 'vendlists_get_listing', 'vendlists_quote_ebay_fees']);
-  const destructiveTools = new Set(['vendlists_upload_photos', 'vendlists_generate', 'vendlists_publish']);
+  const readTools = new Set(['vendlists_status', 'vendlists_find_listings', 'vendlists_get_listing', 'vendlists_quote_ebay_fees']);
+  const destructiveTools = new Set(['vendlists_update_draft', 'vendlists_upload_photos', 'vendlists_generate', 'vendlists_publish', 'vendlists_update_draft']);
   for (const tool of tools) {
     assert.ok(tool.annotations.title, `${tool.name}: missing annotation title`);
     assert.equal(tool.annotations.readOnlyHint, readTools.has(tool.name), `${tool.name}: read semantics`);
     assert.equal(tool.annotations.destructiveHint, destructiveTools.has(tool.name), `${tool.name}: destructive semantics`);
-    assert.equal(tool.annotations.idempotentHint, readTools.has(tool.name), `${tool.name}: retry semantics`);
+    assert.equal(tool.annotations.idempotentHint, readTools.has(tool.name) || tool.name === 'vendlists_acknowledge_ebay_fees', `${tool.name}: retry semantics`);
     assert.equal(tool.annotations.openWorldHint, true, `${tool.name}: external service`);
   }
   const publish = tools.find((tool) => tool.name === 'vendlists_publish');
   assert.equal(publish.annotations.destructiveHint, true);
   assert.equal(publish.annotations.readOnlyHint, false);
   assert.ok(publish.inputSchema.required.includes('confirmedByPerson'));
-  console.log('PASS: declared plugin launcher works outside checkout; seven expected tools');
+  console.log('PASS: declared plugin launcher works outside checkout; eleven expected tools');
   console.log('PASS: complete tool safety annotations and local workflow instructions');
 
   const { resources } = await client.listResources();
@@ -72,6 +72,12 @@ try {
   assert.equal(omitted.isError, true);
   assert.match(firstText(omitted), /confirmedByPerson/);
   console.log('PASS: missing publishing confirmation is rejected');
+
+  const notice = await client.callTool({ name: 'vendlists_acknowledge_ebay_fees',
+    arguments: { listingId: 'l_test', marketplaceId: 'EBAY_US', acknowledgedByPerson: false } });
+  assert.equal(notice.isError, true);
+  assert.match(firstText(notice), /^Fee notice not recorded/);
+  console.log('PASS: fee notice without explicit agreement refuses before account mutation');
 
   const status = await client.callTool({ name: 'vendlists_status', arguments: {} });
   assert.equal(status.isError, true);

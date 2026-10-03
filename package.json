@@ -1,11 +1,13 @@
 {
   "name": "vendlists-agent-kit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "An eBay listing assistant for Claude: local MCP tools, photo-to-listing workflow and listing-quality review with Vendlists.",
   "scripts": {
     "mcp": "node mcp/server.mjs",
     "check": "node scripts/check-live-api.mjs",
-    "smoke": "node mcp/smoke-test.mjs"
+    "smoke": "node mcp/smoke-test.mjs",
+    "test": "node mcp/workflow-test.mjs",
+    "lint": "node --check mcp/server.mjs && node --check mcp/listings.mjs && node --check mcp/workflow-test.mjs && node --check mcp/smoke-test.mjs && node --check scripts/check-live-api.mjs"
   },
   "keywords": [
     "ebay",
