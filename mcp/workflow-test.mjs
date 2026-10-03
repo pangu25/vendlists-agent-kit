@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -18,6 +19,11 @@ const listingPath = `/listings/${base.listingId}`;
 let listing = structuredClone(base);
 let page = { items: [base], nextToken: 'opaque+cursor/=' };
 let conflict = false;
+let createMode = 'ok';
+let setupMode = 'ok';
+let feeMode = 'ok';
+let setupReads = 0;
+const created = new Map();
 const requests = [];
 const schema = { info: { version: 'fixture' }, paths: Object.fromEntries([
   ['/agent/me', ['get']], ['/listings', ['get', 'post']], ['/listings/upload-url', ['post']],
@@ -43,6 +49,33 @@ const fixture = createServer(async (req, res) => {
     if (conflict) return reply({ error: 'This listing changed. Refresh and try again.' }, 409);
     listing = { ...listing, ...body, updatedAt: 'revision-2' }; delete listing.expectedUpdatedAt;
     return reply(listing);
+  }
+  if (url.pathname === '/listings' && req.method === 'POST') {
+    const retryKey = req.headers['idempotency-key'];
+    assert.match(retryKey, /^[\x21-\x7e]{1,64}$/);
+    const old = created.get(retryKey);
+    if (old && old.raw !== raw) return reply({ error: 'Different request for this key', code: 'IDEMPOTENCY_KEY_REUSED' }, 400);
+    const value = old?.value ?? { ...base, listingId: 'created-' + created.size, status: 'draft' };
+    created.set(retryKey, { raw, value });
+    if (createMode === 'lost') { req.socket.destroy(); return; }
+    if (createMode === 'malformed') { res.writeHead(200); res.end('invalid-json'); return; }
+    if (createMode === 'limited') { res.setHeader('Retry-After', '120'); return reply({ error: 'Budget spent', code: 'BUDGET' }, 429); }
+    if (createMode === 'key-echo') return reply({ error: 'Reject ' + key, code: 'FORBIDDEN' }, 403);
+    return reply(value, old ? 200 : 201);
+  }
+  if (url.pathname === '/ebay/status') {
+    setupReads += 1;
+    if (setupMode === 'limited') { res.setHeader('Retry-After', '120'); return reply({ error: 'Busy' }, 429); }
+    if (setupMode === 'changed') listing = { ...listing, marketplaceId: 'EBAY_US', updatedAt: 'changed' };
+    return reply({ connected: true, ebayAccountId: setupMode === 'wrong-account' ? 'other-shop' : 'selected-shop',
+      status: 'active', publishReadiness: { sellerRegistration: { state: 'blocked', checkedAt: 'previous-check' } },
+      accessToken: 'must-not-be-returned', ebayFeeNoticeSites: [] });
+  }
+  if (url.pathname === '/ebay/seller-defaults') return reply({ ebayAccountId: 'selected-shop', authoritative: true,
+    isConfigured: false, missing: ['postage'], sellerDefaults: { marketplaceId: 'EBAY_GB', postalCode: 'private' } });
+  if (url.pathname === `${listingPath}/channels/fees`) {
+    assert.deepEqual(body, { action: 'confirm', marketplaceId: 'EBAY_GB' });
+    return reply({ feeNotice: { confirmedSites: feeMode === 'ok' ? ['EBAY_GB'] : [] } });
   }
   return reply({ error: 'Unexpected fixture request' }, 400);
 });
@@ -112,6 +145,75 @@ try {
   assert.equal((await call('vendlists_update_draft', { listingId: 'draft-1', changes: { title: 'Edit' } })).isError, true);
   assert.equal(requests.length, beforeInvalidEdit);
   console.log('PASS: nested invalid values, nulls, unknown controls and omitted revision rejected before I/O');
+
+  const create = (args = {}) => call('vendlists_create_listing', { notes: 'Camera, scratched case', marketplaceId: 'EBAY_GB', ...args });
+  createMode = 'lost';
+  const lost = await create();
+  assert.equal(lost.isError, true); const recovery = JSON.parse(text(lost));
+  assert.match(recovery.idempotencyKey, /^[0-9a-f-]{36}$/);
+  assert.equal(requests.at(-1).headers['idempotency-key'], recovery.idempotencyKey);
+  const attempts = requests.filter((r) => r.path === '/listings' && r.method === 'POST').length;
+  createMode = 'ok';
+  const replayed = JSON.parse(text(await create({ idempotencyKey: recovery.idempotencyKey })));
+  assert.equal(replayed.listingId, created.get(recovery.idempotencyKey).value.listingId);
+  assert.equal(created.size, 1);
+  assert.equal(requests.filter((r) => r.path === '/listings' && r.method === 'POST').length, attempts + 1);
+  const conflictCreate = await create({ idempotencyKey: recovery.idempotencyKey, notes: 'Different item' });
+  assert.equal(conflictCreate.isError, true); assert.equal(JSON.parse(text(conflictCreate)).code, 'IDEMPOTENCY_KEY_REUSED');
+  for (const mode of ['malformed', 'limited', 'key-echo']) {
+    createMode = mode; const result = await create(); const data = JSON.parse(text(result));
+    assert.equal(result.isError, true); assert.ok(data.idempotencyKey); assert.ok(!text(result).includes(key));
+    if (mode === 'limited') { assert.equal(data.status, 429); assert.equal(data.retryAfter, '120'); }
+  }
+  const beforeBadKey = requests.length;
+  for (const idempotencyKey of ['', 'has space', 'x'.repeat(65), '\n']) assert.equal((await create({ idempotencyKey })).isError, true);
+  assert.equal(requests.length, beforeBadKey);
+  console.log('PASS: lost-response replay, malformed-response recovery, conflicting keys, 429 and credential redaction');
+
+  reset(); const beforeSetup = requests.length;
+  const setup = JSON.parse(text(await call('vendlists_check_setup', { listingId: 'draft-1' })));
+  assert.equal(setup.accountScope, 'selected-shop'); assert.match(setup.evidence, /not a fresh eBay check/);
+  assert.equal(setup.connection.publishReadiness.sellerRegistration.checkedAt, 'previous-check');
+  assert.ok(!text({ content: [{ type: 'text', text: JSON.stringify(setup) }] }).includes('must-not-be-returned'));
+  assert.equal(setup.configuration.postalCode, undefined);
+  assert.equal(requests.length, beforeSetup + 4);
+  for (const r of requests.slice(beforeSetup).filter((r) => r.path.startsWith('/' + 'ebay/'))) assert.deepEqual(r.query, { accountId: 'selected-shop' });
+  reset({ ebayAccountId: undefined }); const countNoAccount = setupReads;
+  assert.equal(JSON.parse(text(await call('vendlists_check_setup', { listingId: 'draft-1' }))).accountScope, 'unknown');
+  assert.equal(setupReads, countNoAccount);
+  for (const mode of ['wrong-account', 'changed', 'limited']) {
+    reset(); setupMode = mode; const before = setupReads;
+    const result = await call('vendlists_check_setup', { listingId: 'draft-1' });
+    assert.equal(result.isError, true); assert.equal(setupReads, before + 1);
+    if (mode === 'limited') assert.match(text(result), /Retry-After: 120/);
+  }
+  setupMode = 'ok';
+  console.log('PASS: selected-account diagnostics, saved evidence labeling, account/site races and no polling');
+
+  reset(); const beforeNotice = requests.length;
+  for (const args of [{ acknowledgedByPerson: false }, {}]) {
+    assert.equal((await call('vendlists_acknowledge_ebay_fees', { listingId: 'draft-1', marketplaceId: 'EBAY_GB', ...args })).isError, true);
+  }
+  assert.equal(requests.length, beforeNotice);
+  const beforeWrongSite = writeCount();
+  assert.equal((await call('vendlists_acknowledge_ebay_fees', { listingId: 'draft-1', marketplaceId: 'EBAY_US', acknowledgedByPerson: true })).isError, true);
+  assert.equal(writeCount(), beforeWrongSite);
+  const acknowledged = await call('vendlists_acknowledge_ebay_fees', { listingId: 'draft-1', marketplaceId: 'EBAY_GB', acknowledgedByPerson: true });
+  assert.equal(JSON.parse(text(acknowledged)).published, false);
+  assert.deepEqual(requests.at(-1).body, { action: 'confirm', marketplaceId: 'EBAY_GB' });
+  feeMode = 'missing';
+  assert.equal((await call('vendlists_acknowledge_ebay_fees', { listingId: 'draft-1', marketplaceId: 'EBAY_GB', acknowledgedByPerson: true })).isError, true);
+  assert.ok(!requests.some((r) => r.path.startsWith('/' + 'ebay/publish/')));
+  console.log('PASS: explicit fee acknowledgement, marketplace binding, confirmed result and no implicit publish');
+
+  delete schema.paths['/listings/{listingId}'].put;
+  const child = spawn(config.command, config.args.map(replace), { cwd: tmpdir(), env: { ...process.env,
+    VENDLISTS_API: api, VENDLISTS_API_KEY: key, VENDLISTS_KEY: key }, stdio: ['ignore', 'ignore', 'pipe'] });
+  let stderr = ''; child.stderr.on('data', (chunk) => { stderr += chunk; });
+  const code = await new Promise((resolve, reject) => { child.on('close', resolve); child.on('error', reject); });
+  assert.equal(code, 1); assert.match(stderr, /PUT \/listings\/\{listingId\}/);
+  console.log('PASS: missing HTTP method fails startup before serving tools');
+
 } finally {
   await client.close(); fixture.closeAllConnections(); await new Promise((resolve) => fixture.close(resolve));
 }
