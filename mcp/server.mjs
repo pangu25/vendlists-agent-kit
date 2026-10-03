@@ -31,7 +31,7 @@ import { promisify } from 'node:util';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { changesSchema, draftBody, listingIdSchema, listingView, object, revisionSchema } from './listings.mjs';
+import { assertFixedPrice, changesSchema, draftBody, listingIdSchema, listingView, object, revisionSchema } from './listings.mjs';
 
 const API = process.env.VENDLISTS_API ?? 'https://api.vendlists.com';
 const KEY = process.env.VENDLISTS_API_KEY ?? process.env.VENDLISTS_KEY ?? '';
@@ -93,7 +93,7 @@ async function asUploadable(file) {
   );
 }
 
-/** Every path this server calls. Checked against the live schema at startup. */
+/** Every API method/path this server calls. Checked against the live schema at startup. */
 const OPERATIONS = [
   ['get', '/agent/me'], ['get', '/listings'], ['post', '/listings'], ['post', '/listings/upload-url'],
   ['get', '/listings/{listingId}'], ['put', '/listings/{listingId}'],
@@ -123,17 +123,17 @@ async function api(method, path, body, headers = {}) {
     try { parsed = JSON.parse(text); } catch { /* preserve short plain-text error */ }
     const message = redact(parsed?.error ?? parsed?.message ?? text).slice(0, 600);
     const failure = new Error(`${method} ${path} → ${res.status}: ${message}`
-      + (res.status === 429 ? ` Retry-After: ${res.headers.get('retry-after') ?? '60'}. Stop and wait; do not retry immediately.` : ''));
+      + (res.status === 429 ? ` Retry-After: ${redact(res.headers.get('retry-after') ?? '60')}. Stop and wait; do not retry immediately.` : ''));
     failure.status = res.status;
     failure.code = typeof parsed?.code === 'string' ? redact(parsed.code).slice(0, 100) : undefined;
-    failure.retryAfter = res.headers.get('retry-after') ?? undefined;
+    failure.retryAfter = res.headers.has('retry-after') ? redact(res.headers.get('retry-after')) : undefined;
     if (failure.code) failure.message += ` [${failure.code}]`;
     throw failure;
   }
   return text ? JSON.parse(text) : null;
 }
 
-const asText = (value) => ({ content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }] });
+const asText = (value) => ({ content: [{ type: 'text', text: redact(typeof value === 'string' ? value : JSON.stringify(value, null, 2)) }] });
 const asError = (message) => ({ isError: true, content: [{ type: 'text', text: redact(typeof message === 'string' ? message : JSON.stringify(message, null, 2)) }] });
 
 async function guideMarkdown() {
@@ -253,11 +253,10 @@ server.registerTool(
     },
     annotations: { title: 'Generate listing content', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
   },
-  async ({ listingId, extrasApprovalId }) => asText(await api(
-    'POST',
-    `/listings/${encodeURIComponent(listingId)}/generate`,
-    extrasApprovalId ? { extrasApprovalId } : {},
-  )),
+  async ({ listingId, extrasApprovalId }) => {
+    assertFixedPrice(await api('GET', `/listings/${encodeURIComponent(listingId)}`));
+    return asText(await api('POST', `/listings/${encodeURIComponent(listingId)}/generate`, extrasApprovalId ? { extrasApprovalId } : {}));
+  },
 );
 
 server.registerTool(
@@ -309,8 +308,13 @@ server.registerTool(
     const path = `/listings/${encodeURIComponent(listingId)}`;
     const listing = await api('GET', path);
     const body = draftBody(listing, expectedUpdatedAt, changes);
-    const saved = await api('PUT', path, body);
-    return asText({ listing: listingView(saved), nextStep: 'Review the saved values. Any earlier publishing approval is invalid; quote fees and ask again before publishing.' });
+    try {
+      const saved = await api('PUT', path, body);
+      return asText({ listing: listingView(saved), nextStep: 'Review the saved values. Any earlier publishing approval is invalid; quote fees and ask again before publishing.' });
+    } catch (error) {
+      return asError({ message: 'Draft edit was not confirmed. Read the current draft before any retry; do not force an old revision.',
+        status: error.status, code: error.code, retryAfter: error.retryAfter, detail: redact(error.message) });
+    }
   },
 );
 
@@ -340,6 +344,9 @@ server.registerTool(
       evidence: 'Saved readiness/configuration, not a fresh eBay check or proof that this listing will publish.' };
     if (typeof listing.ebayAccountId !== 'string' || !listing.ebayAccountId) {
       return asText({ ...summary, accountScope: 'unknown', nextStep: 'Select the intended eBay account in the Vendlists editor. Do not infer readiness from another/default account.' });
+    }
+    if (typeof listing.updatedAt !== 'string' || !listing.updatedAt || typeof listing.marketplaceId !== 'string' || !listing.marketplaceId) {
+      return asError('The listing revision or marketplace is unavailable. Open the editor; setup cannot be bound to this listing yet.');
     }
     const query = new URLSearchParams({ accountId: listing.ebayAccountId });
     const status = await api('GET', `/ebay/status?${query}`);
@@ -399,6 +406,7 @@ server.registerTool(
         + 'and call this again with confirmedByPerson: true only after they say yes.',
       );
     }
+    assertFixedPrice(await api('GET', `/listings/${encodeURIComponent(listingId)}`));
     return asText(await api('POST', `/ebay/publish/${encodeURIComponent(listingId)}`, {}));
   },
 );

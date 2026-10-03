@@ -19,6 +19,7 @@ const listingPath = `/listings/${base.listingId}`;
 let listing = structuredClone(base);
 let page = { items: [base], nextToken: 'opaque+cursor/=' };
 let conflict = false;
+let editMode = 'ok';
 let createMode = 'ok';
 let setupMode = 'ok';
 let feeMode = 'ok';
@@ -48,6 +49,7 @@ const fixture = createServer(async (req, res) => {
   if (url.pathname === listingPath && req.method === 'PUT') {
     if (conflict) return reply({ error: 'This listing changed. Refresh and try again.' }, 409);
     listing = { ...listing, ...body, updatedAt: 'revision-2' }; delete listing.expectedUpdatedAt;
+    if (editMode === 'malformed') { res.writeHead(200); res.end('invalid-json'); return; }
     return reply(listing);
   }
   if (url.pathname === '/listings' && req.method === 'POST') {
@@ -89,7 +91,7 @@ const client = new Client({ name: 'workflow-fixture', version: '1.0.0' });
 const text = (result) => result.content.find((entry) => entry.type === 'text')?.text ?? '';
 const call = (name, args) => client.callTool({ name, arguments: args });
 const writeCount = () => requests.filter((r) => r.method !== 'GET').length;
-const reset = (overrides = {}) => { listing = { ...structuredClone(base), ...overrides }; conflict = false; };
+const reset = (overrides = {}) => { listing = { ...structuredClone(base), ...overrides }; conflict = false; editMode = 'ok'; };
 try {
   await client.connect(transport);
   const found = JSON.parse(text(await call('vendlists_find_listings', { query: 'Camera & lens', status: 'pending_review', limit: 5 })));
@@ -120,13 +122,15 @@ try {
     { ebayListingId: 'live-item', status: 'failed' }, { origin: 'ebay_import' },
     { ebaySelling: { format: 'AUCTION' } }, { ebayListingFormat: 'AUCTION' },
     { ebayAuctionObservation: {} }, { ebayListingType: 'Chinese' }, { ebaySelling: { format: 'UNKNOWN' } },
+    { ebaySelling: null }, { ebaySelling: {} }, { ebaySelling: [] }, { ebayListingFormat: null },
     { updatedAt: 'someone-else-edited' }, { updatedAt: undefined },
   ]) {
     reset(overrides); const before = writeCount();
     const refused = await call('vendlists_update_draft', { listingId: 'draft-1', expectedUpdatedAt: 'revision-1', changes: { title: 'Edit' } });
     assert.equal(refused.isError, true, JSON.stringify(overrides)); assert.equal(writeCount(), before);
   }
-  for (const specifics of [null, [], { ISBN: ['9781234567890'] }]) {
+  for (const specifics of [null, [], { ISBN: ['9781234567890'] }, { ['x'.repeat(66)]: 'valid' },
+    { Brand: 'x'.repeat(501) }, { Brand: ' saved with whitespace ' }, { Brand: 'a\u0000b' }, { ' Size ': 'M' }]) {
     reset({ itemSpecifics: specifics }); const before = writeCount();
     assert.equal((await call('vendlists_update_draft', { listingId: 'draft-1', expectedUpdatedAt: 'revision-1', changes: { itemSpecifics: { Colour: 'Black' } } })).isError, true);
     assert.equal(writeCount(), before);
@@ -139,12 +143,34 @@ try {
   const beforeInvalidEdit = requests.length;
   for (const changes of [{}, { price: 1.5 }, { price: -1 }, { price: null }, { quantity: 0 },
     { itemSpecifics: { Size: ['M'] } }, { itemSpecifics: { Size: null } }, { itemSpecifics: { constructor: 'bad' } },
+    { itemSpecifics: { ' Size ': 'M' } }, { itemSpecifics: { Size: 'a\u0000b' } },
     { bestOffer: { enabled: true } }, { marketplaceId: 'EBAY_US' }, { condition: 'NEW' }, { title: 'x'.repeat(81) }]) {
     assert.equal((await call('vendlists_update_draft', { listingId: 'draft-1', expectedUpdatedAt: 'revision-1', changes })).isError, true, JSON.stringify(changes));
   }
   assert.equal((await call('vendlists_update_draft', { listingId: 'draft-1', changes: { title: 'Edit' } })).isError, true);
   assert.equal(requests.length, beforeInvalidEdit);
   console.log('PASS: nested invalid values, nulls, unknown controls and omitted revision rejected before I/O');
+
+  reset({ publishBlockers: [{ mode: 'SELECTION_ONLY', aspectName: 'Size', allowedValues: ['M', 'L'], allowedValuesTruncated: true }],
+    publishRemedies: [{ code: 'SETUP_NEEDED', message: 'Finish seller setup' }], lastPublishError: 'Setup incomplete' });
+  const detail = JSON.parse(text(await call('vendlists_get_listing', { listingId: 'draft-1' })));
+  assert.equal(detail.publishRemedies[0].code, 'SETUP_NEEDED'); assert.equal(detail.lastPublishError, 'Setup incomplete');
+  const beforeBadSelection = writeCount();
+  assert.equal((await call('vendlists_update_draft', { listingId: 'draft-1', expectedUpdatedAt: 'revision-1', changes: { itemSpecifics: { Size: 'Invented size' } } })).isError, true);
+  assert.equal(writeCount(), beforeBadSelection);
+  assert.ok(!(await call('vendlists_update_draft', { listingId: 'draft-1', expectedUpdatedAt: 'revision-1', changes: { itemSpecifics: { Size: 'M' } } })).isError);
+  reset(); editMode = 'malformed';
+  const uncertainEdit = await call('vendlists_update_draft', { listingId: 'draft-1', expectedUpdatedAt: 'revision-1', changes: { title: 'Saved despite lost result' } });
+  assert.equal(uncertainEdit.isError, true); assert.match(text(uncertainEdit), /not confirmed/);
+  assert.equal(JSON.parse(text(await call('vendlists_get_listing', { listingId: 'draft-1' }))).title, 'Saved despite lost result');
+  for (const overrides of [{ ebaySelling: { format: 'AUCTION' } }, { ebayListingFormat: 'AUCTION' },
+    { ebayAuctionObservation: {} }, { ebaySelling: null }, { ebaySelling: { format: 'UNKNOWN' } }, { ebayListingType: 'Chinese' }]) {
+    reset(overrides); const before = writeCount();
+    assert.equal((await call('vendlists_generate', { listingId: 'draft-1' })).isError, true);
+    assert.equal((await call('vendlists_publish', { listingId: 'draft-1', confirmedByPerson: true })).isError, true);
+    assert.equal(writeCount(), before);
+  }
+  console.log('PASS: sanitizer-preserving specifics, accepted selection values, unconfirmed edit recovery and auction operation guards');
 
   const create = (args = {}) => call('vendlists_create_listing', { notes: 'Camera, scratched case', marketplaceId: 'EBAY_GB', ...args });
   createMode = 'lost';
@@ -188,6 +214,11 @@ try {
     if (mode === 'limited') assert.match(text(result), /Retry-After: 120/);
   }
   setupMode = 'ok';
+  for (const overrides of [{ updatedAt: undefined }, { marketplaceId: undefined }]) {
+    reset(overrides); const before = setupReads;
+    assert.equal((await call('vendlists_check_setup', { listingId: 'draft-1' })).isError, true);
+    assert.equal(setupReads, before);
+  }
   console.log('PASS: selected-account diagnostics, saved evidence labeling, account/site races and no polling');
 
   reset(); const beforeNotice = requests.length;
