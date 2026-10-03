@@ -15,4 +15,4 @@ Default endpoint is a reviewed draft. Publish only after a separate current fee 
 
 Use vendlists_show_listing after reading the intended draft to render its current preview. The display tool rereads the authenticated listing; do not pass invented listing data to it.
 
-Use the selected account returned by `vendlists_status` to bind a new draft explicitly with `ebayAccountId`. Preserve that field with the identical retry inputs/key. If an existing draft has no saved account, use the editor to select one before quoting fees or publishing. Do not publish across a marketplace or currency mismatch.
+Use the selected account returned by `vendlists_status` to bind a new draft explicitly with `ebayAccountId`. Preserve that field with the identical retry inputs/key. Older drafts without a saved account must be reviewed and published through the existing Vendlists editor. This connection cannot bind or choose an account for them; do not create a duplicate to bypass that limit. Do not publish across a marketplace or currency mismatch.

@@ -31,3 +31,5 @@ npm run chatgpt:sync -- /path/to/reviewed/aws-feature-worktree
 ZIP output contains only the portable plugin root (manifest, MCP config, four skills, logo and license). It excludes UI development dependencies, tests, credentials and reviewer access. The hosted server carries the compiled UI; its SHA256 is generated alongside the HTML. `chatgpt:validate -- --release` also requires a real demo URL, so the candidate cannot accidentally be called review-ready.
 
 The preview uses sample data and a local mock host. Desktop and mobile/dark, empty/processing/recovery, untrusted text, save, dirty refresh and explicit fee/publish review were checked locally. No claim of live ChatGPT rendering or OAuth is made from these checks.
+
+Hosted publishing requires a saved eBay account and marketplace. Older unbound drafts can still be read/improved here; use their existing Vendlists editor to review the target and publish. The connection does not expose an account-binding edit or recreate drafts to bypass the limit.
