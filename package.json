@@ -1,13 +1,17 @@
 {
   "name": "vendlists-agent-kit",
   "version": "1.2.0",
-  "description": "An eBay listing assistant for Claude: local MCP tools, photo-to-listing workflow and listing-quality review with Vendlists.",
+  "description": "AI eBay listing workflows for ChatGPT and Claude: item photos, accurate titles and specifics, draft review and guarded publishing with Vendlists.",
   "scripts": {
     "mcp": "node mcp/server.mjs",
     "check": "node scripts/check-live-api.mjs",
     "smoke": "node mcp/smoke-test.mjs",
     "test": "node mcp/workflow-test.mjs",
-    "lint": "node --check mcp/server.mjs && node --check mcp/listings.mjs && node --check mcp/workflow-test.mjs && node --check mcp/smoke-test.mjs && node --check scripts/check-live-api.mjs"
+    "lint": "node --check mcp/server.mjs && node --check mcp/listings.mjs && node --check mcp/workflow-test.mjs && node --check mcp/smoke-test.mjs && node --check scripts/check-live-api.mjs && node --check scripts/chatgpt-package.mjs && node --check scripts/sync-chatgpt-widget.mjs",
+    "chatgpt:validate": "node scripts/chatgpt-package.mjs",
+    "chatgpt:pack": "node scripts/chatgpt-package.mjs --pack",
+    "chatgpt:build": "npm run build --prefix chatgpt-ui",
+    "chatgpt:sync": "node scripts/sync-chatgpt-widget.mjs"
   },
   "keywords": [
     "ebay",
@@ -52,5 +56,9 @@
     "type": "git",
     "url": "git+https://github.com/pangu25/vendlists-agent-kit.git"
   },
-  "main": "mcp/server.mjs"
+  "main": "mcp/server.mjs",
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
+  }
 }

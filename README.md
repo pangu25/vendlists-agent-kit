@@ -1,4 +1,4 @@
-# Vendlists — eBay listing assistant for Claude
+# Vendlists — AI eBay listing assistant for ChatGPT and Claude
 
 Turn local photos into an eBay listing on your own seller account. Vendlists writes a title, description, category, condition, item specifics and a suggested price. Review the draft and eBay's listing fee, then approve publication.
 
@@ -9,6 +9,12 @@ Example requests:
 - “List this jacket on eBay using these photos. The left cuff has a small stain.”
 - “Improve this eBay draft's title and tell me which item specifics are missing.”
 - “Review this Vendlists listing before I decide whether to publish it.”
+
+## ChatGPT release candidate
+
+The separate [ChatGPT package](plugins/chatgpt) connects through OAuth and a hosted MCP server, with a responsive listing workbench for reviewing photos, titles, descriptions, price and quantity. Its 13 tools cover drafts, photo upload, generation, item specifics, selected-account setup, eBay fees and approved publishing. The directory candidate is being prepared; it is not publicly available yet. [Release requirements and build commands](docs/chatgpt-plugin.md).
+
+The Claude setup and local tools below retain their existing workflow.
 
 ## Where it works
 

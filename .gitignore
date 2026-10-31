@@ -3,3 +3,6 @@ node_modules/
 .DS_Store
 photos/
 *.local.mjs
+
+chatgpt-ui/dist/
+dist/
