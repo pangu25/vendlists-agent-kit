@@ -28,7 +28,7 @@
       "interface": {
         "displayName": "Vendlists",
         "shortDescription": "AI eBay listings from photos",
-        "longDescription": "Turn item photos and seller facts into eBay listings with Vendlists. Built for resellers and eBay sellers who want help writing accurate titles, clear descriptions and item specifics.\n\nConnect your Vendlists account, select item photos and describe what you know about the item. Generate a draft, review its photos, title, price and condition in a listing preview, and save supported draft edits. Find existing drafts before creating duplicates. Get plain-language help with eBay account setup and listing-fee notices.\n\nPublishing requires your explicit approval of the current listing and eBay fee. Generating listings uses your existing Vendlists allowance. This plugin does not buy subscriptions or credits. It supports the existing Buy It Now workflow; auction publishing, bulk publishing, live-listing edits, automatic ISBN imports and other marketplaces are unavailable. It does not guarantee search rankings, prices or sales.",
+        "longDescription": "Turn item photos and seller facts into eBay listings with Vendlists. Built for resellers and eBay sellers who want help writing accurate titles, clear descriptions and item specifics.\n\nConnect your Vendlists account, select item photos and describe what you know about the item. Generate a draft, review its photos, title, price and condition in a listing preview, and save supported draft edits. Find existing drafts before creating duplicates. Get plain-language help with eBay account setup and listing-fee notices.\n\nPublishing requires your explicit approval of the current listing and eBay fee. Generating listings uses your existing Vendlists allowance. It does not buy or sell anything. It supports the existing Buy It Now workflow; auction publishing, bulk publishing, live-listing edits, automatic ISBN imports and other marketplaces are unavailable. It does not guarantee search rankings, prices or sales.",
         "developerName": "Vendlists",
         "category": "Productivity",
         "capabilities": [
@@ -80,7 +80,7 @@
               "description": "Fee and publishing approval",
               "prompt": "Show me my Vendlists camera draft and the current eBay listing fee so I can decide whether to publish.",
               "tools_triggered": "vendlists_get_listing, vendlists_quote_ebay_fees, vendlists_show_listing",
-              "expected_behavior": "Show title, selected marketplace/account, quantity, price/currency and fee. Ask separately for any first-site fee acknowledgement and for approval of the exact current draft. The prompt is not publication approval; no publish call."
+              "expected_behavior": "Show title, selected marketplace/account, quantity, price/currency and fee, and render the draft in the listing workbench. Tell the person that the fee agreement and Publish are theirs to do in the workbench. The prompt is not publication approval; the assistant makes no publish or fee-agreement call."
             }
           ],
           "negative": [
