@@ -29,7 +29,7 @@ export class App {
   }
   async connect() {
     const result = await this.request('ui/initialize', { appInfo: this.info, appCapabilities: this.capabilities, protocolVersion: '2026-01-26' }, 10_000);
-    if (!result || result.protocolVersion !== '2026-01-26' || !result.hostCapabilities || !result.hostContext) throw new Error('Unsupported host');
+    if (!result || typeof result.protocolVersion !== 'string' || !result.hostCapabilities || !result.hostContext) throw new Error('Unsupported host');
     this.context = result.hostContext; this.hostCapabilities = result.hostCapabilities; this.ready = true;
     window.parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/initialized' }, '*');
     if (this.options.autoResize && typeof ResizeObserver !== 'undefined') {

@@ -2,7 +2,7 @@ import { App } from './bridge.mjs';
 const app = new App({ name: 'Vendlists', version: '0.1.0' }, {}, { autoResize: true });
 const $ = id => document.getElementById(id);
 const fields = ['title', 'price', 'quantity', 'condition', 'description'];
-let listing, currentQueued, busy = false, connected = false, dirty = false, quote, quoteRevision;
+let listing, currentQueued, busy = false, connected = false, dirty = false, quote, quoteRevision, publishesHere = true;
 const text = (id, value) => { $(id).textContent = String(value ?? ''); };
 function notice(message, tone = '') { text('notice', message); $('notice').dataset.tone = tone; }
 function money(cents, currency) {
@@ -41,6 +41,7 @@ function render(value, force = false) {
     notice('You have unsaved edits. Load the current draft to review its latest values before replacing your edits.'); return;
   }
   listing = value; dirty = false; currentQueued = undefined; invalidateApproval(); $('load-current').hidden = true;
+  if (value.canPublishHere === false) publishesHere = false;
   $('empty').hidden = true; $('work').hidden = false;
   const statuses = { draft: 'Draft', pending_review: 'Ready to review', processing: 'Writing listing', failed: 'Needs attention', published: 'Live on eBay', ended: 'Ended', sold: 'Sold' };
   text('status', statuses[value.status] ?? 'Check listing');
@@ -67,6 +68,8 @@ function render(value, force = false) {
   text('saved', value.updatedAt ? 'Current saved draft' : 'Revision unavailable');
   text('next-title', value.status === 'processing' ? 'Your listing is being written' : 'Ready for the next step?');
   text('next-copy', value.status === 'processing' ? 'Refresh to check progress. Do not start generation again while it is processing.' : canEdit(value) ? 'Review the item details, then check the eBay listing fee.' : 'Open Vendlists for this listing’s next step.');
+  $('fee').hidden = !publishesHere;
+  if (!publishesHere && canEdit(value)) { text('next-title', 'Ready to publish?'); text('next-copy', 'Check the eBay fee and publish from this listing at Vendlists.'); }
   const blockers = value.publishBlockerCount ?? (Array.isArray(value.publishBlockers) ? value.publishBlockers.length : 0);
   notice(blockers ? `${blockers} listing detail${blockers === 1 ? '' : 's'} need attention before publishing. Resolve setup or open the editor.` : value.status === 'failed' ? 'This draft needs attention. Resolve setup to see the next action.' : '');
   text('generate', value.title ? 'Regenerate draft' : 'Generate draft'); enable();
